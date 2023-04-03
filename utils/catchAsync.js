@@ -1,5 +1,5 @@
 module.exports = catchAsync = (func) => {
-    return (req, res, nex) => {
-        func(req, res, nex).catch(err => next(err));
+    return (req, res, next) => {
+        func(req, res, next).catch(err => next(err));
     }
 };
