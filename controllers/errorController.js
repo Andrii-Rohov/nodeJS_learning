@@ -50,6 +50,13 @@ const handleValidationErrorDB = (err) => {
     let errorMassage = `Invalid input data: ${value}`
     return new AppCustomError(errorMassage, 400);
 };
+const handleJWTError = (err) => {
+    return new AppCustomError('Invalid token. Please log in again', 401);
+}
+
+const handleJWTTokenExpiredError = (err) => {
+    return new AppCustomError('Your token expired. Please log in again', 401);
+}
 
 module.exports = (err, re, res, next) => {
     if (process.env.NODE_ENV === "development") {
@@ -59,6 +66,8 @@ module.exports = (err, re, res, next) => {
         if(err.name === "CastError") error = handleCastErrorDB(error);
         if(err.code === 11000) error = handleDUplicateValuesErrorDB(error);
         if(err.name === "ValidationError") error = handleValidationErrorDB(error);
+        if(err.name === "JsonWebTokenError") error = handleJWTError(error);
+        if(err.name === "TokenExpiredError") error = handleJWTTokenExpiredError(error);
 
         sendErrorProd(error, res);
     }

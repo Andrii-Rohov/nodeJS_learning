@@ -1,6 +1,8 @@
 const mongoose = require('mongoose');
 const validator = require("validator");
 
+var bcrypt = require('bcryptjs');
+
 const userShcema = new mongoose.Schema({
     name: {
         type: String,
@@ -8,8 +10,7 @@ const userShcema = new mongoose.Schema({
         trim: true
     },
     photo: {
-        type: String,
-        required: [true, "A user must have a photo"]
+        type: String
     },
     email: {
         type: String,
@@ -21,14 +22,49 @@ const userShcema = new mongoose.Schema({
     password: {
         type: String,
         required: [true, "A user must have a password"],
-        minlength: [8, "A password must be at least 8 char long"]
+        minlength: [8, "A password must be at least 8 char long"],
+        select: false
     },
     passwordConfirm: {
         type: String,
         required: [true, "A user must have a password"],
-        minlength: [8, "A password must be at least 8 char long"]
+        minlength: [8, "A password must be at least 8 char long"],
+        validate: {
+            validator: function (el) {
+                return this.password === el;
+            },
+            message: "Passwords are not the same"
+        }
+    },
+    passwordsChangedAt: {
+        type: Date
     },
 });
+
+userShcema.pre('save', async function(next) {
+    // Only run this is passsword modified
+    if (!this.isModified("password")) return next();
+
+    //encrypt password(hash) with processor 12% or smth
+    this.password =  await bcrypt.hash(this.password, 12);
+    //delete passwordConfirm
+    this.passwordConfirm = undefined;
+
+    next();
+});
+
+userShcema.methods.correctPassword = async (candidatePassword, encryptedPassword) => {
+    return await bcrypt.compare(candidatePassword, encryptedPassword);
+};
+
+userShcema.methods.changedPasswordAfter = async (timeStampJWT, user) => {
+    if (user.passwordsChangedAt) {
+        const changedTimestamp = parseInt(user.passwordsChangedAt.getTime() / 1000, 10);
+        return timeStampJWT < changedTimestamp;
+    }
+
+    return false;
+};
 
 const User = new mongoose.model("User", userShcema);
 

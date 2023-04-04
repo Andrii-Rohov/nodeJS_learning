@@ -1,12 +1,15 @@
 const express = require('express');
 const tourController = require(`${__dirname}/../controllers/tourController`);
+const authController = require(`${__dirname}/../controllers/authController`);
 
 const route = express.Router();
 
 // route.param('id', tourController.checkID);
 
+// route.use(authController.protect);
+
 route.route('/')
-    .get(tourController.getAllTours)
+    .get(authController.protect, tourController.getAllTours)
     .post(tourController.addNewTour);
 
 route.route('/top-5-tours')
