@@ -57,9 +57,9 @@ userShcema.methods.correctPassword = async (candidatePassword, encryptedPassword
     return await bcrypt.compare(candidatePassword, encryptedPassword);
 };
 
-userShcema.methods.changedPasswordAfter = async (timeStampJWT, user) => {
-    if (user.passwordsChangedAt) {
-        const changedTimestamp = parseInt(user.passwordsChangedAt.getTime() / 1000, 10);
+userShcema.methods.changedPasswordAfter = function (timeStampJWT) {
+    if (this.passwordsChangedAt) {
+        const changedTimestamp = parseInt(this.passwordsChangedAt.getTime() / 1000, 10);
         return timeStampJWT < changedTimestamp;
     }
 
