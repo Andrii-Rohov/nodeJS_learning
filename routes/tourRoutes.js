@@ -27,6 +27,6 @@ route.route('/importTours')
 route.route('/:id/:optionalParam?')
     .get(tourController.getTour)
     .patch(tourController.updateTour)
-    .delete(tourController.deleteTour);
+    .delete(authController.protect, authController.restrictTo("admin", "lead-guide"), tourController.deleteTour);
 
 module.exports = route;

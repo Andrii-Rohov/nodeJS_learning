@@ -11,6 +11,12 @@ route.route('/signup')
 route.route('/login')
     .post(authController.logIn);
 
+    route.route('/forgotPassword')
+    .post(authController.forgotPassword);
+
+route.route('/resetPassword/:token')
+    .patch(authController.resetPassword);
+
 route.route('/')
     .get(userController.gettAllUsers)
     .post(userController.addNewUsers);
