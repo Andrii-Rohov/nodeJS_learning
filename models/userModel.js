@@ -65,6 +65,14 @@ userShcema.pre('save', async function(next) {
     next();
 });
 
+userShcema.pre('save', async function(next) {
+    if (!this.isModified("password") || this.isNew) return next();
+
+    this.passwordsChangedAt = Date.now() - 1000;
+
+    next();
+});
+
 userShcema.methods.correctPassword = async (candidatePassword, encryptedPassword) => {
     return await bcrypt.compare(candidatePassword, encryptedPassword);
 };

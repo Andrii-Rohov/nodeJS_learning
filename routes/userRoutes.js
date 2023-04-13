@@ -17,6 +17,12 @@ route.route('/login')
 route.route('/resetPassword/:token')
     .patch(authController.resetPassword);
 
+route.route('/updateMyPassword')
+    .patch(authController.protect, authController.updatePassword);
+
+route.route('/updateMe')
+    .patch(authController.protect, userController.updateMe);
+
 route.route('/')
     .get(userController.gettAllUsers)
     .post(userController.addNewUsers);

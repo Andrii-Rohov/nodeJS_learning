@@ -1,6 +1,7 @@
 const { promisify } = require('util'); // else could be utils.promisify
 const User = require("./../models/userModel");
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 
 const AppCustomError = require(`${__dirname}/../utils/appCustomError`);
 const catchAsync = require("./../utils/catchAsync");
@@ -13,6 +14,19 @@ const signToken = (id) => {
     return token;
 }
 
+const createAndSendToken = (user, statusCode, res) => {
+    console.log(user)
+    let token = signToken(user._id);
+
+    res.status(statusCode).json({
+        status: "succes",
+        token,
+        data: {
+            user: user
+        }
+    });
+}
+
 exports.signUp = catchAsync(async (req, res, next) => {
     const newUser = await User.create({
         name: req.body.name,
@@ -22,15 +36,7 @@ exports.signUp = catchAsync(async (req, res, next) => {
         role: req.body.role //This is bad practice, but it`s in the course
     });
 
-    let token = signToken(newUser._id);
-
-    res.status(201).json({
-        status: "succes",
-        token,
-        data: {
-            user: newUser
-        }
-    });
+    createAndSendToken(newUser, 201, res);
 });
 
 exports.logIn = catchAsync(async (req, res, next) => {
@@ -50,11 +56,7 @@ exports.logIn = catchAsync(async (req, res, next) => {
     }
 
     //Create and send token
-    const token = signToken(user._id);
-    res.status(200).json({
-        status: "success",
-        token
-    });
+    createAndSendToken(user, 200, res);
 });
 
 exports.protect = catchAsync(async (req, res, next) => {
@@ -132,5 +134,46 @@ exports.forgotPassword = catchAsync(async (req, res, next) => {
     });
 });
 
+
 exports.resetPassword = catchAsync(async (req, res, next) => {
+    //1) Get user based on the token
+    const hashedToken = crypto.createHash("sha256").update(req.params.token).digest('hex');
+
+    const user = await User.findOne({passwordResetToken: hashedToken, passwordResetExpires: {$gt: Date.now()}});
+    console.log(user);
+
+    //2) If token not expired and user exists, set new password
+    if(!user) {
+        return next(new AppCustomError("There is no user, or youre token has expired. Try again later", 400));
+    }
+
+    //3) Update changed password for the user
+    user.password = req.body.password;
+    user.passwordConfirm = req.body.passwordConfirm;
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+
+    await user.save();
+
+    //4)Log the user in, send JWT
+    createAndSendToken(user, 200, res);
+});
+
+exports.updatePassword = catchAsync(async (req, res, next) => {
+    //1) Get the user from collection
+    const user = await User.findById(req.user.id).select("+password");
+
+    //2) Check if POSTed password is correct
+    let correctPassword = user ? await user.correctPassword(req.body.oldPassword, user.password) : null;
+
+    if(!user || !correctPassword) {
+        return next(new AppCustomError('Incorrect email or password', 401));
+    }
+    //3) If correct update password
+    user.password = req.body.newPassword;
+    user.passwordConfirm = req.body.newPasswordConfirm;
+    await user.save();
+
+    //4) Log user in, send JWT
+    createAndSendToken(user, 200, res);
 });
