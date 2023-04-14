@@ -1,12 +1,15 @@
 const express = require('express');
 const tourController = require(`${__dirname}/../controllers/tourController`);
+const authController = require(`${__dirname}/../controllers/authController`);
 
 const route = express.Router();
 
 // route.param('id', tourController.checkID);
 
+// route.use(authController.protect);
+
 route.route('/')
-    .get(tourController.getAllTours)
+    .get(authController.protect, tourController.getAllTours)
     .post(tourController.addNewTour);
 
 route.route('/top-5-tours')
@@ -24,6 +27,6 @@ route.route('/importTours')
 route.route('/:id/:optionalParam?')
     .get(tourController.getTour)
     .patch(tourController.updateTour)
-    .delete(tourController.deleteTour);
+    .delete(authController.protect, authController.restrictTo("admin", "lead-guide"), tourController.deleteTour);
 
 module.exports = route;
