@@ -15,9 +15,19 @@ const signToken = (id) => {
 }
 
 const createAndSendToken = (user, statusCode, res) => {
-    console.log(user)
     let token = signToken(user._id);
+    const cookieOptions = {
+        expires: new Date(Date.now() + (process.env.JWT_COOKIE_EXPIRES_IN * 24 *60 * 60 * 1000)),
+        httpOnly: true
+    };
 
+    if (process.env.NODE_ENV === "production") cookieOptions.secure = true; //This thing blocked sending cookies if not secure (HTTPS)
+
+    res.cookie("jwt", token, cookieOptions);
+
+    console.log(user);
+
+    user.password = undefined;
     res.status(statusCode).json({
         status: "succes",
         token,

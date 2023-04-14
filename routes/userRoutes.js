@@ -23,6 +23,9 @@ route.route('/updateMyPassword')
 route.route('/updateMe')
     .patch(authController.protect, userController.updateMe);
 
+route.route('/deleteMe')
+    .delete(authController.protect, userController.deleteMe);
+
 route.route('/')
     .get(userController.gettAllUsers)
     .post(userController.addNewUsers);

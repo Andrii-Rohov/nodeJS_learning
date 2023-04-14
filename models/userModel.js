@@ -15,6 +15,11 @@ const userShcema = new mongoose.Schema({
         enum: ['user', 'guide', 'lead-guide', 'admin'],
         default: 'user'
     },
+    active: {
+        type: Boolean,
+        default: true,
+        select: false
+    },
     photo: {
         type: String
     },
@@ -53,6 +58,7 @@ const userShcema = new mongoose.Schema({
     }
 });
 
+//Query middleware
 userShcema.pre('save', async function(next) {
     // Only run this is passsword modified
     if (!this.isModified("password")) return next();
@@ -73,6 +79,14 @@ userShcema.pre('save', async function(next) {
     next();
 });
 
+userShcema.pre(/^find/, function(next) {
+    //this keyword point to the current query object
+    this.find({ active: {$ne: false}});
+
+    next();
+});
+
+//Methods
 userShcema.methods.correctPassword = async (candidatePassword, encryptedPassword) => {
     return await bcrypt.compare(candidatePassword, encryptedPassword);
 };
