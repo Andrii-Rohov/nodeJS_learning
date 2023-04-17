@@ -76,7 +76,37 @@ const tourShcema = new mongoose.Schema({
     secretTour: {
         type: Boolean,
         default: false
-    }
+    },
+    startLocation: {
+        //GeoJSON
+        type: {
+            type: String,
+            default: "Point",
+            enum: ['Point']
+        },
+        coordinates: [Number],
+        address: String,
+        description: String
+    },
+    locations: [
+        {
+            type: {
+                type: String,
+                default: "Point",
+                enum: ["Point"]
+            },
+            coordinates: [Number],
+            address: String,
+            description: String,
+            day: Number
+        }
+    ],
+    guides: [
+        {
+            type: mongoose.Schema.ObjectId,
+            ref: 'User'
+        }
+    ]
 }, {
     toJSON: { virtuals: true},
     toObject: { virtuals: true}
@@ -92,6 +122,17 @@ tourShcema.pre("save", function(next) {
     this.slug = slugify(this.name, { lower: true});
     next();
 });
+
+// This is used to imbeded documents in tour douments, in schema should be  guides: Array
+// tourShcema.pre("save", async function(next) {
+//     let array = [];
+//     let guidesPromises = this.guides.map(async (elem) => {
+//         let user = await User.findById(elem);
+//         return user;
+//     });
+//     this.guides = await Promise.all(guidesPromises);
+//     next();
+// });
 
 // tourShcema.pre("save", function(next) {
 //     console.log("will save document")
@@ -109,6 +150,15 @@ tourShcema.pre(/^find/, function(next) {
     this.start = Date.now();
     next();
 });
+
+tourShcema.pre(/^find/, function (next) {
+    this.populate({
+        path: 'guides',
+        select: '-__v -passwordChangedAt' //to exclude some data that we don`t want to recieve
+    });
+
+    next();
+})
 
 tourShcema.post(/^find/, function(docs, next) {
     console.log(`Query took ${Date.now() - this.start} mls`);

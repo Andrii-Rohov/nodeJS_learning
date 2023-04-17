@@ -12,7 +12,7 @@ mongoose.connect(process.env.DATABASE_LOCAL, {
     console.log("DB connection successful!")
 });
 
-const tours = JSON.parse(fs.readFileSync(`${__dirname}/tours-simple.json`));
+const tours = JSON.parse(fs.readFileSync(`${__dirname}/tours.json`));
 const Tour = require(`${__dirname}/../../models/tourModel`);
 
 const importData = async () => {
