@@ -1,32 +1,42 @@
 const express = require('express');
 const tourController = require(`${__dirname}/../controllers/tourController`);
 const authController = require(`${__dirname}/../controllers/authController`);
+const reviewRouter = require("./../routes/reviewRoutes");
 
-const route = express.Router();
+const router = express.Router();
 
 // route.param('id', tourController.checkID);
 
 // route.use(authController.protect);
 
-route.route('/')
-    .get(authController.protect, tourController.getAllTours)
-    .post(tourController.addNewTour);
+router.use('/:tourId/reviews', reviewRouter);
 
-route.route('/top-5-tours')
+router.route("/distances/:latlng/unit/:unit")
+    .get(tourController.getDistances);
+
+//Could be like this tours-within?distance=20$cneter=40,-20&unit=km
+router.route("/tours-within/:distance/center/:latlng/unit/:unit")
+    .get(tourController.getToursWithin);
+
+router.route('/top-5-tours')
     .get(tourController.aliasTopTours, tourController.getAllTours)
 
-route.route('/tour-stats')
+router.route('/tour-stats')
     .get(tourController.getTourStats);
 
-route.route('/tour-monthly-plan/:year')
-    .get(tourController.getMonthlyPlan);
+router.route('/tour-monthly-plan/:year')
+    .get(authController.protect, authController.restrictTo("admin", "lead-guide", "guide"),tourController.getMonthlyPlan);
 
-route.route('/importTours')
+router.route('/importTours')
     .post(tourController.importTours);
 
-route.route('/:id/:optionalParam?')
+router.route('/:id/:optionalParam?')
     .get(tourController.getTour)
-    .patch(tourController.updateTour)
+    .patch(authController.protect, authController.restrictTo("admin", "lead-guide"),tourController.updateTour)
     .delete(authController.protect, authController.restrictTo("admin", "lead-guide"), tourController.deleteTour);
 
-module.exports = route;
+router.route('/')
+        .get(tourController.getAllTours)
+        .post(authController.protect, authController.restrictTo("admin", "lead-guide"), tourController.addNewTour);
+
+module.exports = router;

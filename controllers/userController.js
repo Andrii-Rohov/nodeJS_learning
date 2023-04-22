@@ -3,6 +3,7 @@ const User = require("./../models/userModel");
 const catchAsync = require(`${__dirname}/../utils/catchAsync`);
 
 const AppCustomError = require("./../utils/appCustomError");
+const factoryController = require("./factoryController");
 
 const filterObj = (obj, ...allowedFields) => {
     const filteredObj = {};
@@ -14,17 +15,6 @@ const filterObj = (obj, ...allowedFields) => {
     return filteredObj;
 }
 
-exports.gettAllUsers = catchAsync(async (req, res) => {
-    const allUsers = await User.find();
-
-    res.status(+httpStatusCodes[200].code).json({
-        status: 'succes',
-        data: {
-            users: allUsers
-        }
-    });
-});
-
 exports.addNewUsers = (req, res) => {
     res.status(+httpStatusCodes[500].code).json({
         status: httpStatusCodes[500].phrase,
@@ -32,11 +22,10 @@ exports.addNewUsers = (req, res) => {
     })
 }
 
-exports.getUser = (req, res) => {
-    res.status(+httpStatusCodes[500].code).json({
-        status: httpStatusCodes[500].phrase,
-        message: "This rout is not yet defined"
-    })
+exports.getMe = (req, res, next) => {
+    req.params.id = req.user.id;
+
+    next();
 }
 
 exports.updateMe = catchAsync(async (req, res, next) => {
@@ -71,15 +60,10 @@ exports.deleteMe = catchAsync(async (req, res, next) => {
     });
 });
 
-exports.updateUser = (req, res) => {
-    res.status(+httpStatusCodes[500].code).json({
-        status: httpStatusCodes[500].phrase,
-        message: "This rout is not yet defined"
-    })
-}
-exports.deleteUser = (req, res) => {
-    res.status(+httpStatusCodes[500].code).json({
-        status: httpStatusCodes[500].phrase,
-        message: "This rout is not yet defined"
-    })
-}
+exports.gettAllUsers = factoryController.getAll(User);
+
+exports.getUser = factoryController.getOne(User);
+
+exports.updateUser = factoryController.deleteOne(User);
+
+exports.deleteUser = factoryController.deleteOne(User);

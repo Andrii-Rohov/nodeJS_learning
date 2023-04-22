@@ -40,7 +40,10 @@ const tourShcema = new mongoose.Schema({
         type: Number,
         default: 0,
         min: [0, "Rating must be more than 0"],
-        max: [5, "Rating must be less than 5"]
+        max: [5, "Rating must be less than 5"],
+        set: (val) => {
+            return Math.round(val * 10);
+        }
     },
     ratingQuantity: {
         type: Number,
@@ -76,15 +79,60 @@ const tourShcema = new mongoose.Schema({
     secretTour: {
         type: Boolean,
         default: false
-    }
+    },
+    startLocation: {
+        //GeoJSON
+        type: {
+            type: String,
+            default: "Point",
+            enum: ['Point']
+        },
+        coordinates: [Number],
+        address: String,
+        description: String
+    },
+    locations: [
+        {
+            type: {
+                type: String,
+                default: "Point",
+                enum: ["Point"]
+            },
+            coordinates: [Number],
+            address: String,
+            description: String,
+            day: Number
+        }
+    ],
+    guides: [
+        {
+            type: mongoose.Schema.ObjectId,
+            ref: 'User'
+        }
+    ]
 }, {
     toJSON: { virtuals: true},
     toObject: { virtuals: true}
 });
 
+//Indexes(a.k.a. sorting in DB)
+// tourShcema.index({price: 1})
+tourShcema.index({price: 1, ratingsAverage: -1});
+
+tourShcema.index({slug: 1});
+
+tourShcema.index({startLocation: '2dsphere'});
+
 //Virtual properties a.k.a. Getters
 tourShcema.virtual('durationWeeks').get(function() {
     return this.duration / 7;
+});
+
+//Virtual populate
+tourShcema.virtual('reviews', {
+    ref: "Review",
+    foreignField: "tour",
+    localField: "_id"
 });
 
 //Document Middleware: runs before .save() and create()
@@ -92,6 +140,17 @@ tourShcema.pre("save", function(next) {
     this.slug = slugify(this.name, { lower: true});
     next();
 });
+
+// This is used to imbeded documents in tour douments, in schema should be  guides: Array
+// tourShcema.pre("save", async function(next) {
+//     let array = [];
+//     let guidesPromises = this.guides.map(async (elem) => {
+//         let user = await User.findById(elem);
+//         return user;
+//     });
+//     this.guides = await Promise.all(guidesPromises);
+//     next();
+// });
 
 // tourShcema.pre("save", function(next) {
 //     console.log("will save document")
@@ -110,17 +169,26 @@ tourShcema.pre(/^find/, function(next) {
     next();
 });
 
+tourShcema.pre(/^find/, function (next) {
+    this.populate({
+        path: 'guides',
+        select: '-__v -passwordChangedAt' //to exclude some data that we don`t want to recieve
+    });
+
+    next();
+});
+
 tourShcema.post(/^find/, function(docs, next) {
     console.log(`Query took ${Date.now() - this.start} mls`);
     next();
 });
 
 //Aggregation middleware
-tourShcema.pre("aggregate", function(next) {
-    this.pipeline().unshift({'$match': { secretTour: { $ne: true}}});
-    console.log(this.pipeline());
-    next();
-});
+// tourShcema.pre("aggregate", function(next) {
+//     this.pipeline().unshift({'$match': { secretTour: { $ne: true}}});
+//     console.log(this.pipeline());
+//     next();
+// });
 
 const Tour = new mongoose.model("Tour", tourShcema);
 
