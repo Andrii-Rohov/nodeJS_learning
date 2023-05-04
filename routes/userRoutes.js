@@ -11,6 +11,9 @@ route.route('/signup')
 route.route('/login')
     .post(authController.logIn);
 
+route.route("/logout")
+    .get(authController.logout);
+
 route.route('/forgotPassword')
     .post(authController.forgotPassword);
 
@@ -21,7 +24,7 @@ route.route('/resetPassword/:token')
 route.use(authController.protect);
 
 route.route('/updateMyPassword')
-    .patch( authController.updatePassword);
+    .patch(authController.updatePassword);
 
 route.route('/updateMe')
     .patch(userController.updateMe);

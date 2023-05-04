@@ -1,34 +1,63 @@
 const AppCustomError = require(`${__dirname}/../utils/appCustomError`);
-const sendErrorDev = (err, res) => {
-    err.statusCode = err.statusCode || 500;
-    err.status = err.status || 'error';
-    res.status(err.statusCode).json({
-        status: err.status,
-        error: err,
-        stack: err.stack,
-        message: err.message
-    })
-};
-
-const sendErrorProd = (err, res) => {
-    //Operational error: trusted error
-    if (err.isOperational) {
+const sendErrorDev = (err, req, res) => {
+    if (req.originalUrl.startsWith("/api")) {
         err.statusCode = err.statusCode || 500;
         err.status = err.status || 'error';
         res.status(err.statusCode).json({
             status: err.status,
+            error: err,
+            stack: err.stack,
             message: err.message
         })
     } else {
+        err.statusCode = err.statusCode || 500;
+        res.status(err.statusCode).render('error', {
+            title: "Something went wrong",
+            msg: err.message
+        })
+    }
+};
+
+const sendErrorProd = (err, req, res) => {
+    //Operational error: trusted error
+    if (req.originalUrl.startsWith("/api")) {
+        if (err.isOperational) {
+            err.statusCode = err.statusCode || 500;
+            err.status = err.status || 'error';
+            return res.status(err.statusCode).json({
+                status: err.status,
+                message: err.message
+            })
+        }
+
         //First log error
         console.err("Some error occured", err);
 
         //Send some generic error to client
-        res.status(500).json({
+        return res.status(500).json({
             status: "error",
             message: "Something vent wrong"
         })
     }
+    if (err.isOperational) {
+        err.statusCode = err.statusCode || 500;
+        err.status = err.status || 'error';
+        return res.status(err.statusCode).render('error', {
+            title: "Something went wrong",
+            msg: err.message
+        })
+    }
+
+    //First log error
+    console.err("Some error occured", err);
+
+    //Send some generic error to client
+    err.statusCode = err.statusCode || 500;
+    return res.status(err.statusCode).render('error', {
+        title: "Something went wrong",
+        msg: "Please try again later"
+    })
+
 };
 
 const handleDUplicateValuesErrorDB = (err) => {
@@ -58,9 +87,9 @@ const handleJWTTokenExpiredError = (err) => {
     return new AppCustomError('Your token expired. Please log in again', 401);
 }
 
-module.exports = (err, re, res, next) => {
+module.exports = (err, req, res, next) => {
     if (process.env.NODE_ENV === "development") {
-        sendErrorDev(err, res);
+        sendErrorDev(err, req, res);
     } else if (process.env.NODE_ENV === "production") {
         let error = {...err};
         if(err.name === "CastError") error = handleCastErrorDB(error);
@@ -69,6 +98,6 @@ module.exports = (err, re, res, next) => {
         if(err.name === "JsonWebTokenError") error = handleJWTError(error);
         if(err.name === "TokenExpiredError") error = handleJWTTokenExpiredError(error);
 
-        sendErrorProd(error, res);
+        sendErrorProd(error, req, res);
     }
 };
