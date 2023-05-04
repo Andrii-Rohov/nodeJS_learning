@@ -69,11 +69,27 @@ exports.logIn = catchAsync(async (req, res, next) => {
     createAndSendToken(user, 200, res);
 });
 
+exports.logout = (req, res, next) => {
+    const cookieOptions = {
+        expires: new Date(Date.now() + (10 * 1000)),
+        httpOnly: true
+    };
+
+    res.cookie("jwt", "logged out", cookieOptions);
+
+    res.status(200).json({
+        status: "succes",
+        data: null
+    });
+}
+
 exports.protect = catchAsync(async (req, res, next) => {
     //Getting token and check if exist
     let token;
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
         token = req.headers.authorization.split(' ')[1];
+    } else if(req.cookies.jwt) {
+        token = req.cookies.jwt;
     }
     //Validate verification token with jwt module
     if (!token) {
@@ -96,6 +112,34 @@ exports.protect = catchAsync(async (req, res, next) => {
     req.user = currentUser;
     next();
 });
+
+//Only for render pages and there were be no errors
+exports.isLoggedIn = async (req, res, next) => {
+    //Getting token and check if exist
+    if (req.cookies.jwt) {
+        try {
+            token = req.cookies.jwt;
+            const decoded = await promisify(jwt.verify)(req.cookies.jwt, process.env.JWT_SECRET);
+    
+            //If Verified check if user still exist
+            const currentUser = await User.findById(decoded.id);
+            if(!currentUser) {
+                return next()
+            }
+    
+            //Check if user changed password after jwt token was issued
+            if (currentUser.changedPasswordAfter(decoded.iat)) {
+                return next();
+            }
+    
+            res.locals.user = currentUser;
+            return next();
+        } catch(error) {
+            return next();
+        }
+    }
+    next();
+};
 
 exports.restrictTo = (...roles) => {
     return (req, res, next) => {
@@ -180,8 +224,8 @@ exports.updatePassword = catchAsync(async (req, res, next) => {
         return next(new AppCustomError('Incorrect email or password', 401));
     }
     //3) If correct update password
-    user.password = req.body.newPassword;
-    user.passwordConfirm = req.body.newPasswordConfirm;
+    user.password = req.body.newPassword || req.body.password;
+    user.passwordConfirm = req.body.newPasswordConfirm || req.body.passwordConfirm;
     await user.save();
 
     //4) Log user in, send JWT
